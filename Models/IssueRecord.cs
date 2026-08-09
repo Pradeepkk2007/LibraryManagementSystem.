@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LibraryManagementSystem.API.Models
 {
@@ -17,6 +18,7 @@ namespace LibraryManagementSystem.API.Models
 
         public DateTime? ReturnDate { get; set; }
 
+        [Column(TypeName = "decimal(18,2)")]
         public decimal Fine { get; set; }
 
         public string IssuedBy { get; set; } = string.Empty;

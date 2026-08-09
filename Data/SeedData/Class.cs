@@ -1,10 +1,12 @@
-﻿namespace LibraryManagementSystem.API.Data.SeedData
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace LibraryManagementSystem.API.Data.SeedData
 {
     public static class SeedData
     {
         public static void Initialize(ApplicationDbContext context)
         {
-            context.Database.EnsureCreated();
+            context.Database.Migrate();
 
             AuthorSeed.Seed(context);
 

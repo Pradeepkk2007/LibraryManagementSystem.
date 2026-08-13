@@ -78,12 +78,15 @@ namespace LibraryManagementSystem.API.Data.SeedData
 
             context.SaveChanges();
 
+            // Get CopyIds of currently issued books
+            var issuedCopyIds = issueRecords
+                .Where(i => i.ReturnDate == null)
+                .Select(i => i.CopyId)
+                .ToList();
+
             // Update BookCopy Status
             var issuedCopies = context.BookCopies
-                .Where(x => issueRecords
-                    .Where(i => i.ReturnDate == null)
-                    .Select(i => i.CopyId)
-                    .Contains(x.CopyId))
+                .Where(x => issuedCopyIds.Contains(x.CopyId))
                 .ToList();
 
             foreach (var copy in issuedCopies)

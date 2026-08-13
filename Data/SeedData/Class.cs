@@ -1,30 +1,65 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using LibraryManagementSystem.API.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace LibraryManagementSystem.API.Data.SeedData
 {
     public static class SeedData
     {
-        public static void Initialize(ApplicationDbContext context)
+        public static async Task InitializeAsync(ApplicationDbContext context)
         {
-            context.Database.Migrate();
+            const int maxRetries = 5;
 
-            AuthorSeed.Seed(context);
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    Console.WriteLine(
+                        $"Database initialization attempt {attempt}/{maxRetries}...");
 
-            PublisherSeed.Seed(context);
+                    await context.Database.MigrateAsync();
 
-            CategorySeed.Seed(context);
+                    Console.WriteLine(
+                        "Database migration completed successfully.");
 
-            BookSeed.Seed(context);
+                    AuthorSeed.Seed(context);
+                    PublisherSeed.Seed(context);
+                    CategorySeed.Seed(context);
+                    BookSeed.Seed(context);
+                    BookCopySeed.Seed(context);
+                    StudentSeed.Seed(context);
+                    UserSeed.Seed(context);
+                    IssueRecordSeed.Seed(context);
+                    ReservationSeed.Seed(context);
 
-            BookCopySeed.Seed(context);
+                    Console.WriteLine(
+                        "Database seed completed successfully.");
 
-            StudentSeed.Seed(context);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(
+                        $"Database initialization failed on attempt {attempt}:");
 
-            UserSeed.Seed(context);
+                    Console.WriteLine(ex.Message);
 
-            IssueRecordSeed.Seed(context);
+                    if (attempt == maxRetries)
+                    {
+                        Console.WriteLine(
+                            "Database initialization failed after all retry attempts.");
 
-            ReservationSeed.Seed(context);
+                        throw;
+                    }
+
+                    var delaySeconds = attempt * 10;
+
+                    Console.WriteLine(
+                        $"Retrying in {delaySeconds} seconds...");
+
+                    await Task.Delay(
+                        TimeSpan.FromSeconds(delaySeconds));
+                }
+            }
         }
     }
 }

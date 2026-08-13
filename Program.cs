@@ -1,10 +1,8 @@
 using LibraryManagementSystem.API.Configuration;
 using LibraryManagementSystem.API.Data;
-using LibraryManagementSystem.API.Data.SeedData;
 using LibraryManagementSystem.API.Interfaces;
 using LibraryManagementSystem.API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.WebSockets;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -16,7 +14,11 @@ builder.Services.AddControllers();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions =>
+        {
+            sqlOptions.EnableRetryOnFailure();
+        }));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -32,22 +34,30 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Jwt:Audience"],
 
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+                Encoding.UTF8.GetBytes(
+                    builder.Configuration["Jwt:Key"]!))
         };
+
         options.Events = new JwtBearerEvents
         {
             OnAuthenticationFailed = context =>
             {
-                Console.WriteLine("Auth failed: " + context.Exception.Message);
+                Console.WriteLine(
+                    "Auth failed: " + context.Exception.Message);
+
                 return Task.CompletedTask;
             },
+
             OnChallenge = context =>
             {
-                Console.WriteLine("Challenge issued: " + context.ErrorDescription);
+                Console.WriteLine(
+                    "Challenge issued: " + context.ErrorDescription);
+
                 return Task.CompletedTask;
             }
         };
     });
+
 builder.Services.AddAuthorization();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -67,13 +77,17 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Enter your JWT token below (no need to type 'Bearer ' — Swagger UI adds it)."
+        Description =
+            "Enter your JWT token below (no need to type 'Bearer ' — Swagger UI adds it)."
     });
 
-    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
-    {
-        [new OpenApiSecuritySchemeReference("Bearer", document)] = new List<string>()
-    });
+    options.AddSecurityRequirement(document =>
+        new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference(
+                "Bearer",
+                document)] = new List<string>()
+        });
 });
 
 builder.Services.AddScoped<IStudentService, StudentService>();
@@ -86,6 +100,7 @@ builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
 builder.Services.AddScoped<IStudentHistoryService, StudentHistoryService>();
 builder.Services.AddScoped<IStudentDashboardService, StudentDashboardService>();
+
 //builder.Services.Configure<EmailSettings>(
 //    builder.Configuration.GetSection("EmailSettings"));
 
@@ -95,30 +110,25 @@ builder.Services.AddScoped<IAuthorService, AuthorService>();
 builder.Services.AddScoped<IPublisherService, PublisherService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 
-
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+// Swagger
+app.UseSwagger();
+
+app.UseSwaggerUI(options =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Library Management System API v1");
-        options.RoutePrefix = "swagger";
-    });
-}
+    options.SwaggerEndpoint(
+        "/swagger/v1/swagger.json",
+        "Library Management System API v1");
+
+    options.RoutePrefix = "swagger";
+});
 
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
-
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-    SeedData.Initialize(context);
-}
 
 app.Run();
